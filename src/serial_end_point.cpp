@@ -82,6 +82,7 @@ void SerialEndPoint::onMessageRecieved(const two_links_msgs::Byte2ConstPtr& msg)
 
     /////////////////////////////////////////
     // write directly here ??
+    // how to test ??
     if(
         serial_port_buffer.write(
             cmd_buffer,
