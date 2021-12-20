@@ -6,6 +6,8 @@
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
 
+#define AI_INFERENCE_POINT_SCALE_MODIFIER 10.0f
+
 namespace two_links_ml_control
 {
 //////////////////////////////////////////////////
@@ -173,9 +175,9 @@ void AIInferencePoint::onSynchronizedMessageRecieved
     std::array<float, 38ul> output_array { 0.0f };
     input_array[0] = angles_msg->value.x;
     input_array[1] = angles_msg->value.y;
-    input_array[2] = pose_msg->pose.position.x;
-    input_array[3] = pose_msg->pose.position.y;
-    input_array[4] = pose_msg->pose.position.z;
+    input_array[2] = pose_msg->pose.position.x * AI_INFERENCE_POINT_SCALE_MODIFIER;
+    input_array[3] = pose_msg->pose.position.y * AI_INFERENCE_POINT_SCALE_MODIFIER;
+    input_array[4] = pose_msg->pose.position.z * AI_INFERENCE_POINT_SCALE_MODIFIER;
 
     runInference(
         input_array,
