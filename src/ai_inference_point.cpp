@@ -17,12 +17,6 @@ namespace two_links_ml_control
 typedef message_filters::sync_policies::ApproximateTime
 <two_links_msgs::Float2Stamped, geometry_msgs::PoseStamped> InferenceSyncPolicy;
 
-struct CMD
-{
-    uint8_t x;
-    uint8_t y;
-};
-
 class AIInferencePoint
 {
 private:
@@ -40,6 +34,7 @@ private:
     message_filters::Subscriber<two_links_msgs::Float2Stamped> angles_subscriber;
     message_filters::Subscriber<geometry_msgs::PoseStamped> position_subscriber;
     message_filters::Synchronizer<InferenceSyncPolicy> synchronizer;
+    two_links_msgs::Byte2Ptr cmd_msg;
 
 public:
     AIInferencePoint(ros::NodeHandle& node_handle, const char* instance_name) :
@@ -82,13 +77,15 @@ public:
                 _2
             )
         );
+        cmd_msg = boost::make_shared<two_links_msgs::Byte2>();
     }
     ~AIInferencePoint()
     { }
 
-    CMD runInference(
+    void runInference(
         std::array<float, 5>& input_array,
-        std::array<float, 38>& output_array
+        std::array<float, 38>& output_array,
+        const two_links_msgs::Byte2Ptr& cmd_msg
     );
 
     void onSynchronizedMessageRecieved(
@@ -97,9 +94,10 @@ public:
     );
 };
 
-CMD AIInferencePoint::runInference(
+void AIInferencePoint::runInference(
     std::array<float, 5ul>& input_array,
-    std::array<float, 38ul>& output_array
+    std::array<float, 38ul>& output_array,
+    const two_links_msgs::Byte2Ptr& cmd_msg
 )
 {
     const Ort::RunOptions run_options;
@@ -140,28 +138,29 @@ CMD AIInferencePoint::runInference(
         1lu
     );
 
-    CMD cmd;
     float max_so_far(FLT_MIN);
+    uint8_t act_idx(9); // stopping value 90
     for (uint8_t i = 0; i < 19; i++)
     {
         if(output_array[i] > max_so_far)
         {
             max_so_far = output_array[i];
-            cmd.x = i;
+            act_idx = i;
         }
     }
+    cmd_msg->x = act_idx * 10;
 
     max_so_far = FLT_MIN;
+    act_idx = 9;
     for (uint8_t i = 0; i < 19; i++)
     {
         if(output_array[i + 19] > max_so_far)
         {
             max_so_far = output_array[i + 19];
-            cmd.y = i;
+            act_idx = i;
         }
     }
-    
-    return cmd;
+    cmd_msg->y = act_idx * 10;
 }
 
 void AIInferencePoint::onSynchronizedMessageRecieved
@@ -177,17 +176,14 @@ void AIInferencePoint::onSynchronizedMessageRecieved
     input_array[2] = pose_msg->pose.position.x;
     input_array[3] = pose_msg->pose.position.y;
     input_array[4] = pose_msg->pose.position.z;
-    CMD cmd(
-        runInference(
-            input_array,
-            output_array
-        )
-    );
 
-    two_links_msgs::Byte2 cmd_msg;
-    cmd_msg.x = cmd.x;
-    cmd_msg.y = cmd.y;
+    runInference(
+        input_array,
+        output_array,
+        cmd_msg
+    );
     cmd_publisher.publish(cmd_msg);
+    ROS_INFO("cmd x %d y %d", cmd_msg->x, cmd_msg->y);
 }
 
 } // ns

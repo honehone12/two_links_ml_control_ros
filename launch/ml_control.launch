@@ -1,0 +1,10 @@
+<launch>
+    <!-- oak-d -->
+    <include file="$(find oakd_yolov4)/launch/oakd_yolov4.launch"/>
+
+    <!-- serial end point -->
+    <node name="serial_end_point" pkg="two_links_ml_control" type="serial_end_point" output="screen" args="/dev/ttyACM_arduino_uno"/>
+
+    <!-- ai inference point -->
+    <node name="ai_inference_point" pkg="two_links_ml_control" type="ai_inference_point" output="screen"/>
+</launch>

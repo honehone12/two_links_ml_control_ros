@@ -4,14 +4,51 @@
 #include "two_links_msgs/Byte2.h"
 
 #define SERIAL_END_POINT_BAUDRATE 115200u
+#define SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_X 147.112137f
+#define SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_Y 312.354309f
 
 namespace two_links_ml_cotrol
 {
 /////////////////////////////////
 // this node gets servo angle 
-// in 30 FPS
+// in 60 FPS
 // and send cmd 
 // on message recieved
+
+class ServoController
+{
+private:
+    
+public:
+    ServoController()
+    { }
+    ~ServoController()
+    { }
+
+    void initAngleMessage(const two_links_msgs::Float2StampedPtr& msg)
+    {
+        msg->header.frame_id = "";
+        msg->header.stamp = ros::Time::now();
+        msg->value.x = SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_X;
+        msg->value.y = SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_Y;
+    }
+
+    void reinterpretAngleMessage(const two_links_msgs::Float2StampedPtr& msg)
+    {
+        msg->header.stamp = ros::Time::now();
+        float raw(msg->value.x);
+        msg->value.x = fmod(
+            raw - SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_X + 360.0f,
+            360.0f
+        );
+        raw = msg->value.y;
+        msg->value.y = fmod(
+            raw - SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_Y + 360.0f,
+            360.0f
+        );
+        ROS_INFO("angle x %f y %f", msg->value.x, msg->value.y);
+    }
+};
 
 class SerialEndPoint
 {
@@ -29,7 +66,8 @@ private:
     };
     std::vector<uint8_t> feedback_buffer;
     std::vector<uint8_t> cmd_buffer;
-    two_links_msgs::Float2Stamped angle_msg_cache;
+    two_links_msgs::Float2StampedPtr angle_msg_cache;
+    ServoController servo_controller;
 
 public:
     SerialEndPoint(
@@ -37,7 +75,7 @@ public:
         ros::NodeHandle& node_handle
     ) :
         angle_publisher(
-            node_handle.advertise<two_links_msgs::Float2>(
+            node_handle.advertise<two_links_msgs::Float2Stamped>(
                 "servo_angles",
                 1,
                 false
@@ -58,12 +96,8 @@ public:
     { 
         feedback_buffer.resize(8, 0);
         cmd_buffer.resize(2, 0);
-        ////////////////////////////////
-        // init value should be 
-        // reconfiged zero angles. not 0.0f. 
-        angle_msg_cache.value.x = 0.0f;
-        angle_msg_cache.value.y = 0.0f;
-        angle_msg_cache.header.frame_id = "";
+        angle_msg_cache = boost::make_shared<two_links_msgs::Float2Stamped>();
+        servo_controller.initAngleMessage(angle_msg_cache);
     }
     ~SerialEndPoint()
     { }
@@ -72,8 +106,19 @@ public:
     bool readFeedback();
     void publishAngleMsg()
     {
-        angle_msg_cache.header.stamp = ros::Time::now();
+        servo_controller.reinterpretAngleMessage(angle_msg_cache);
         angle_publisher.publish(angle_msg_cache);
+    }
+
+    void close()
+    {
+        cmd_buffer[0] = 90;
+        cmd_buffer[1] = 90;
+        serial_port_buffer.write(
+            cmd_buffer,
+            byte_data_description
+        );
+        serial_port_buffer.close();
     }
 };
 
@@ -82,11 +127,8 @@ void SerialEndPoint::onMessageRecieved(const two_links_msgs::Byte2ConstPtr& msg)
     cmd_buffer[0] = msg->x;
     cmd_buffer[1] = msg->y;
 
-    /////////////////////////////////////////
-    // write directly here ??
-    // how to test ??
     if(
-        serial_port_buffer.write(
+        !serial_port_buffer.write(
             cmd_buffer,
             byte_data_description
         )
@@ -141,10 +183,10 @@ bool SerialEndPoint::readFeedback()
                 isfinite(feedback_y.float_data)
             )
             {
-                angle_msg_cache.value.x = feedback_x.float_data;
-                angle_msg_cache.value.y = feedback_y.float_data;
-                ROS_INFO("feedback x %f", feedback_x.float_data);
-                ROS_INFO("feedback y %f", feedback_y.float_data);
+                angle_msg_cache->value.x = feedback_x.float_data;
+                angle_msg_cache->value.y = feedback_y.float_data;
+                //ROS_INFO("feedback raw x %f", angle_msg_cache->value.x);
+                //ROS_INFO("feedback raw y %f", angle_msg_cache->value.y);
                 return true;
             }
             else
@@ -181,7 +223,7 @@ int main(int argc, char** argv)
     }
 
     ros::NodeHandle node_handle;
-    ros::Rate loop_rate(30.0);
+    ros::Rate loop_rate(60.0);
     two_links_ml_cotrol::SerialEndPoint ser_end_point(
         port_name,
         node_handle
@@ -199,5 +241,7 @@ int main(int argc, char** argv)
         loop_rate.sleep();
     }
     
+    ser_end_point.close();
+
     return 0;
 }
