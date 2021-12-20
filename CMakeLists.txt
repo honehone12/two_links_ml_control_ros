@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   two_links_msgs
   geometry_msgs
+  message_filters
 )
 
 ## System dependencies are found with CMake's conventions
@@ -119,6 +120,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
+include_directories("/home/marsh/onnxruntime-linux-x64-1.10.0/include")
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -135,6 +137,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/two_links_ml_control_node.cpp)
 add_executable(serial_end_point src/serial_end_point.cpp)
+add_executable(ai_inference_point src/ai_inference_point.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +154,8 @@ add_executable(serial_end_point src/serial_end_point.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(serial_end_point ${catkin_LIBRARIES})
+target_link_libraries(ai_inference_point ${catkin_LIBRARIES})
+target_link_libraries(ai_inference_point "/home/marsh/onnxruntime-linux-x64-1.10.0/lib/libonnxruntime.so")
 
 #############
 ## Install ##

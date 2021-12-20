@@ -1,6 +1,6 @@
 #include "two_links_ml_control/serial_port_buffer.hpp"
 #include "ros/ros.h"
-#include "two_links_msgs/Float2.h"
+#include "two_links_msgs/Float2Stamped.h"
 #include "two_links_msgs/Byte2.h"
 
 #define SERIAL_END_POINT_BAUDRATE 115200u
@@ -9,7 +9,7 @@ namespace two_links_ml_cotrol
 {
 /////////////////////////////////
 // this node gets servo angle 
-// in 60 FPS!
+// in 30 FPS
 // and send cmd 
 // on message recieved
 
@@ -29,7 +29,7 @@ private:
     };
     std::vector<uint8_t> feedback_buffer;
     std::vector<uint8_t> cmd_buffer;
-    two_links_msgs::Float2 angle_msg_cache;
+    two_links_msgs::Float2Stamped angle_msg_cache;
 
 public:
     SerialEndPoint(
@@ -61,8 +61,9 @@ public:
         ////////////////////////////////
         // init value should be 
         // reconfiged zero angles. not 0.0f. 
-        angle_msg_cache.x = 0.0f;
-        angle_msg_cache.y = 0.0f;
+        angle_msg_cache.value.x = 0.0f;
+        angle_msg_cache.value.y = 0.0f;
+        angle_msg_cache.header.frame_id = "";
     }
     ~SerialEndPoint()
     { }
@@ -71,6 +72,7 @@ public:
     bool readFeedback();
     void publishAngleMsg()
     {
+        angle_msg_cache.header.stamp = ros::Time::now();
         angle_publisher.publish(angle_msg_cache);
     }
 };
@@ -99,14 +101,14 @@ bool SerialEndPoint::readFeedback()
     if(serial_port_buffer.update(float_data_description.byte_array_length))
     {
         uint8_t byte_container(0);
-        bool is_exoected_data_description(true);
+        bool is_expected_data_description(true);
         for (size_t i = 0; i < SERIAL_COMMUNICATION_DATA_DESCRIPTION_LEN; i++)
         {
             if(serial_port_buffer.readByte(&byte_container))
             {
                 if(byte_container != float_data_description.bin[i])
                 {
-                    is_exoected_data_description = false;
+                    is_expected_data_description = false;
                     ROS_WARN("unexpected byte %x", byte_container);
                 }
             }
@@ -118,7 +120,7 @@ bool SerialEndPoint::readFeedback()
         }
         
         if(
-            is_exoected_data_description &&
+            is_expected_data_description &&
             serial_port_buffer.read(
                 feedback_buffer,
                 float_data_description.byte_array_length
@@ -139,8 +141,8 @@ bool SerialEndPoint::readFeedback()
                 isfinite(feedback_y.float_data)
             )
             {
-                angle_msg_cache.x = feedback_x.float_data;
-                angle_msg_cache.y = feedback_y.float_data;
+                angle_msg_cache.value.x = feedback_x.float_data;
+                angle_msg_cache.value.y = feedback_y.float_data;
                 ROS_INFO("feedback x %f", feedback_x.float_data);
                 ROS_INFO("feedback y %f", feedback_y.float_data);
                 return true;
@@ -148,19 +150,14 @@ bool SerialEndPoint::readFeedback()
             else
             {
                 ROS_WARN("recieved broken values.");
-                return false;
+                // publish cached value.
+                return true;
             }
         }
-        else
-        {
-            return false;
-        }
     }
-    else
-    {
-        ROS_ERROR("failed to read.");
-        return false;
-    }
+    
+    ROS_ERROR("failed to read.");
+    return false;
 }
 
 } //ns
@@ -184,7 +181,7 @@ int main(int argc, char** argv)
     }
 
     ros::NodeHandle node_handle;
-    ros::Rate loop_rate(60.0);
+    ros::Rate loop_rate(30.0);
     two_links_ml_cotrol::SerialEndPoint ser_end_point(
         port_name,
         node_handle
@@ -192,6 +189,7 @@ int main(int argc, char** argv)
 
     while (node_handle.ok())
     {
+        // or publish cached value anyway ??
         if(ser_end_point.readFeedback())
         {
             ser_end_point.publishAngleMsg();
