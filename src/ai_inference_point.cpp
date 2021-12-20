@@ -22,7 +22,7 @@ typedef message_filters::sync_policies::ApproximateTime
 class AIInferencePoint
 {
 private:
-    const char* model_path = "/home/marsh/models/LookingLight.onnx";
+    const char* model_path = "/home/marsh/two_links_ml_control/two_links_ml_control_ros/resource/LookingLight.onnx";
     const char* input_name = "obs_0";
     const char* output_name = "continuous_actions";
 
