@@ -66,9 +66,11 @@ public:
             360.0f
         );
 
+        float signedX(msg->value.x > 180.0f ? msg->value.x - 360.0f : msg->value.x);
+        float signedY(msg->value.y > 180.0f ? msg->value.y - 360.0f : msg->value.y);
         outOfLimnit = !(
-            (msg->value.x - 360.0f) > limits.x_min && msg->value.x < limits.x_max &&
-            (msg->value.y - 360.0f) > limits.y_min && msg->value.y < limits.y_max
+            signedX > limits.x_min && signedX < limits.x_max &&
+            signedY > limits.y_min && signedY < limits.y_max
         );
         ROS_INFO("angle x %f y %f", msg->value.x, msg->value.y);
     }
