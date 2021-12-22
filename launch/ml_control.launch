@@ -7,5 +7,5 @@
 
     <!-- ai inference point -->
     <node name="ai_inference_point" pkg="two_links_ml_control" type="ai_inference_point" output="screen"
-        args="/home/marsh/models/Looking_Mini.onnx"/>
+        args="/home/marsh/models/00Looking_Mini.onnx"/>
 </launch>
