@@ -40,19 +40,19 @@ public:
         bool out(false);
         if(msg->x > 90)
         {
-            out = signedAngleX >= limits.x_max;
+            out = signedAngleX <= limits.x_min;
         }
         else if(msg->x < 90)
         {
-            out = signedAngleX <= limits.x_min;
+            out = signedAngleX >= limits.x_max;
         }
         if(msg->y > 90)
         {
-            out = signedAngleY >= limits.y_max;
+            out = signedAngleY <= limits.y_min;
         }
         else if(msg->y < 90)
         {
-            out = signedAngleY <= limits.y_min;
+            out = signedAngleY >= limits.y_max;
         }
 
         return out;
