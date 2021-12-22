@@ -26,22 +26,36 @@ class ServoController
     };
 
 private:
-    bool outOfLimnit;
     const Limitations limits { -90.0f, 90.0f, -90.0f, 90.0f };
+    float signedAngleX;
+    float signedAngleY;
 public:
-    ServoController() : outOfLimnit(true)
+    ServoController() : signedAngleX(0.0f), signedAngleY(0.0f)
     { }
     ~ServoController()
     { }
     
-    bool OutOfLimit()
+    bool OutOfLimit(const two_links_msgs::Byte2ConstPtr& msg)
     {
-        return outOfLimnit;
-    }
+        bool out(false);
+        if(msg->x > 90)
+        {
+            out = signedAngleX >= limits.x_max;
+        }
+        else if(msg->x < 90)
+        {
+            out = signedAngleX <= limits.x_min;
+        }
+        if(msg->y > 90)
+        {
+            out = signedAngleY >= limits.y_max;
+        }
+        else if(msg->y < 90)
+        {
+            out = signedAngleY <= limits.y_min;
+        }
 
-    void SetSafety()
-    {
-        outOfLimnit = true;
+        return out;
     }
 
     void initAngleMessage(const two_links_msgs::Float2StampedPtr& msg)
@@ -66,12 +80,9 @@ public:
             360.0f
         );
 
-        float signedX(msg->value.x > 180.0f ? msg->value.x - 360.0f : msg->value.x);
-        float signedY(msg->value.y > 180.0f ? msg->value.y - 360.0f : msg->value.y);
-        outOfLimnit = !(
-            signedX > limits.x_min && signedX < limits.x_max &&
-            signedY > limits.y_min && signedY < limits.y_max
-        );
+        float signedAngleX = msg->value.x > 180.0f ? msg->value.x - 360.0f : msg->value.x;
+        float signedAngleY = msg->value.y > 180.0f ? msg->value.y - 360.0f : msg->value.y;
+
         ROS_INFO("angle x %f y %f", msg->value.x, msg->value.y);
     }
 };
@@ -150,7 +161,7 @@ public:
 
 void SerialEndPoint::onMessageRecieved(const two_links_msgs::Byte2ConstPtr& msg)
 {
-    if(servo_controller.OutOfLimit())
+    if(servo_controller.OutOfLimit(msg))
     {
         cmd_buffer[0] = 90;
         cmd_buffer[1] = 90;
@@ -190,7 +201,6 @@ bool SerialEndPoint::readFeedback()
             }
             else
             {
-                servo_controller.SetSafety();
                 ROS_ERROR("failed to read.");
                 return false;
             }
@@ -233,7 +243,6 @@ bool SerialEndPoint::readFeedback()
         }
     }
     
-    servo_controller.SetSafety();
     ROS_ERROR("failed to read.");
     return false;
 }
