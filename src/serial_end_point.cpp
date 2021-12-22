@@ -17,13 +17,32 @@ namespace two_links_ml_cotrol
 
 class ServoController
 {
+    struct Limitations
+    {
+        float x_min;
+        float x_max;
+        float y_min;
+        float y_max;
+    };
+
 private:
-    
+    bool outOfLimnit;
+    const Limitations limits { -90.0f, 90.0f, -90.0f, 90.0f };
 public:
-    ServoController()
+    ServoController() : outOfLimnit(true)
     { }
     ~ServoController()
     { }
+    
+    bool OutOfLimit()
+    {
+        return outOfLimnit;
+    }
+
+    void SetSafety()
+    {
+        outOfLimnit = true;
+    }
 
     void initAngleMessage(const two_links_msgs::Float2StampedPtr& msg)
     {
@@ -45,6 +64,11 @@ public:
         msg->value.y = fmod(
             raw - SERVO_CONTROLLER_ZERO_ANGLE_RECONFIG_Y + 360.0f,
             360.0f
+        );
+
+        outOfLimnit = !(
+            (msg->value.x - 360.0f) > limits.x_min && msg->value.x < limits.x_max &&
+            (msg->value.y - 360.0f) > limits.y_min && msg->value.y < limits.y_max
         );
         ROS_INFO("angle x %f y %f", msg->value.x, msg->value.y);
     }
@@ -124,8 +148,16 @@ public:
 
 void SerialEndPoint::onMessageRecieved(const two_links_msgs::Byte2ConstPtr& msg)
 {
-    cmd_buffer[0] = msg->x;
-    cmd_buffer[1] = msg->y;
+    if(servo_controller.OutOfLimit())
+    {
+        cmd_buffer[0] = 90;
+        cmd_buffer[1] = 90;
+    }
+    else
+    {
+        cmd_buffer[0] = msg->x;
+        cmd_buffer[1] = msg->y;
+    }
 
     if(
         !serial_port_buffer.write(
@@ -156,6 +188,7 @@ bool SerialEndPoint::readFeedback()
             }
             else
             {
+                servo_controller.SetSafety();
                 ROS_ERROR("failed to read.");
                 return false;
             }
@@ -198,6 +231,7 @@ bool SerialEndPoint::readFeedback()
         }
     }
     
+    servo_controller.SetSafety();
     ROS_ERROR("failed to read.");
     return false;
 }

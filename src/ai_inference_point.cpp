@@ -22,7 +22,7 @@ typedef message_filters::sync_policies::ApproximateTime
 class AIInferencePoint
 {
 private:
-    const char* model_path = "/home/marsh/mlros_ws/src/two_links_ml_control/two_links_ml_control_ros/resource/2Looking_WithoutLimits.onnx";
+    const char* model_path;
     const char* input_name = "obs_0";
     const char* output_name = "continuous_actions";
 
@@ -39,7 +39,8 @@ private:
     two_links_msgs::Byte2Ptr cmd_msg;
 
 public:
-    AIInferencePoint(ros::NodeHandle& node_handle, const char* instance_name) :
+    AIInferencePoint(ros::NodeHandle& node_handle, const char* instance_name, const char* model_name) :
+        model_path(model_name),
         ort_env(
             OrtLoggingLevel::ORT_LOGGING_LEVEL_WARNING,
             instance_name
@@ -200,10 +201,16 @@ int main(int argc, char** argv)
         "ai_inference_point"
     );
 
+    if(argc != 2)
+    {
+        ROS_ERROR("model path is not given.");
+    }
+
     ros::NodeHandle node_handle;
     two_links_ml_control::AIInferencePoint inference_point(
         node_handle,
-        "two_links_inference"
+        "two_links_inference",
+        argv[1]
     );
 
     ros::spin();
