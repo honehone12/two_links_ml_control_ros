@@ -7,5 +7,5 @@
 
     <!-- ai inference point -->
     <node name="ai_inference_point" pkg="two_links_ml_control" type="ai_inference_point" output="screen"
-        args="/home/marsh/mlros_ws/src/two_links_ml_control/two_links_ml_control_ros/resource/2Looking_WithoutLimits.onnx"/>
+        args="/home/marsh/models/2Looking_WithoutLimits.onnx"/>
 </launch>
