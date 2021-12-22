@@ -22,7 +22,7 @@ typedef message_filters::sync_policies::ApproximateTime
 class AIInferencePoint
 {
 private:
-    const char* model_path = "/home/marsh/two_links_ml_control/two_links_ml_control_ros/resource/LookingLight.onnx";
+    const char* model_path = "/home/marsh/mlros_ws/src/two_links_ml_control/two_links_ml_control_ros/resource/2Looking_WithoutLimits.onnx";
     const char* input_name = "obs_0";
     const char* output_name = "continuous_actions";
 
@@ -179,13 +179,15 @@ void AIInferencePoint::onSynchronizedMessageRecieved
     input_array[3] = pose_msg->pose.position.y * AI_INFERENCE_POINT_SCALE_MODIFIER;
     input_array[4] = pose_msg->pose.position.z * AI_INFERENCE_POINT_SCALE_MODIFIER;
 
+    ros::Time start_time(ros::Time::now());
     runInference(
         input_array,
         output_array,
         cmd_msg
     );
+    ros::Time end_time(ros::Time::now());
     cmd_publisher.publish(cmd_msg);
-    ROS_INFO("cmd x %d y %d", cmd_msg->x, cmd_msg->y);
+    ROS_INFO("cmd x %d y %d : took %lf", cmd_msg->x, cmd_msg->y, ros::Duration(end_time - start_time).toSec());
 }
 
 } // ns
