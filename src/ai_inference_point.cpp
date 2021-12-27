@@ -188,6 +188,7 @@ void AIInferencePoint::onSynchronizedMessageRecieved
     );
     ros::Time end_time(ros::Time::now());
     cmd_publisher.publish(cmd_msg);
+    ROS_INFO("pos (%f %f %f)", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
     ROS_INFO("cmd x %d y %d : took %lf", cmd_msg->x, cmd_msg->y, ros::Duration(end_time - start_time).toSec());
 }
 
