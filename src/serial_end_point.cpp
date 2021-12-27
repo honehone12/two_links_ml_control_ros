@@ -35,6 +35,8 @@ public:
     ~ServoController()
     { }
     
+    ///////////////////////////////
+    // this does not work well.
     bool OutOfLimit(const two_links_msgs::Byte2ConstPtr& msg)
     {
         bool out(false);
