@@ -54,6 +54,7 @@ public:
         {
             out = signedAngleY >= limits.y_max;
         }
+        ROS_INFO("signed angle X %f Y %f : out %d", signedAngleX, signedAngleY, out);
 
         return out;
     }
