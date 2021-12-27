@@ -80,8 +80,8 @@ public:
             360.0f
         );
 
-        float signedAngleX = msg->value.x > 180.0f ? msg->value.x - 360.0f : msg->value.x;
-        float signedAngleY = msg->value.y > 180.0f ? msg->value.y - 360.0f : msg->value.y;
+        signedAngleX = msg->value.x > 180.0f ? msg->value.x - 360.0f : msg->value.x;
+        signedAngleY = msg->value.y > 180.0f ? msg->value.y - 360.0f : msg->value.y;
 
         ROS_INFO("angle x %f y %f", msg->value.x, msg->value.y);
     }
